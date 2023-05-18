@@ -1,141 +1,131 @@
 package pl.op.danex11.gwselectfromlist;
 
-import android.Manifest;
-import android.content.pm.PackageManager;
+import android.app.Activity;
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.camera.core.Camera;
-import androidx.camera.core.CameraSelector;
-import androidx.camera.core.Preview;
-import androidx.camera.lifecycle.ProcessCameraProvider;
-import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.lifecycle.LifecycleOwner;
-
-import com.google.common.util.concurrent.ListenableFuture;
-
+import androidx.core.widget.TextViewCompat;
+import com.budiyev.android.codescanner.CodeScanner;
+import com.budiyev.android.codescanner.CodeScannerView;
+import com.budiyev.android.codescanner.DecodeCallback;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.Result;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.concurrent.ExecutionException;
 
 public class MainActivity extends AppCompatActivity {
-
-    ListView list;
     TextView ABCTextView;
-    ArrayAdapter adapter ;
-    String selectedItem;
 
-    private static final int PERMISSION_REQUEST_CAMERA = 0;
-    private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
-    private PreviewView previewView;
+    private CodeScanner mCodeScanner;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    protected void onCreate(Bundle paramBundle) {
+        super.onCreate(paramBundle);
         setContentView(R.layout.activity_main);
-        ABCTextView = findViewById(R.id.textviewABC);
-//        Button A =  (Button) findViewById(R.id.buttonA);
-//        Button B =  (Button) findViewById(R.id.buttonB);
-//        Button C =  (Button) findViewById(R.id.buttonC);
+        TextView textView = findViewById(R.id.textviewABC);
+        this.ABCTextView = textView;
+        textView.setText("🦓🦓🦓");
+        TextViewCompat.setAutoSizeTextTypeWithDefaults(this.ABCTextView, 1);
 
-      String[] carsArray = {"AAA", "AAB", "AAC", "AAD", "AAE", "AAF", "AAG", "AAHh", "AAi"};
-//
-//        ArrayList carList = new ArrayList(Arrays.asList(carsArray));
-//        adapter = new ArrayAdapter(this, R.layout.single_row, carList);
 
-        ArrayList<String> carL = new ArrayList<String>();
-        carL.addAll( Arrays.asList(carsArray) );
-        adapter = new ArrayAdapter<String>(this, R.layout.single_row, carL);
+        if (ContextCompat.checkSelfPermission((Context)this, "android.permission.CAMERA") == -1) {
+            ActivityCompat.requestPermissions((Activity)this, new String[] { "android.permission.CAMERA" }, 123);
+            return;
+        }
+        startScanning();
+    }
 
-//
-        Log.e("mytag", "listview ID: " + String.valueOf(R.id.list_view));
-        list = findViewById(R.id.list_view);
-        list.setAdapter(adapter);
+    private void startScanning() {
+        CodeScannerView codeScannerView = (CodeScannerView)findViewById(R.id.scanner_view);
+        CodeScanner codeScanner = new CodeScanner((Context)this, codeScannerView);
+        this.mCodeScanner = codeScanner;
 
-        list.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> adapter, View v, int position, long id) {
-                // MyClass selItem = (MyClass) myList.getSelectedItem(); //
-                selectedItem = (String) list.getItemAtPosition(position); //getter method
-                Toast.makeText(getApplicationContext(), "selected Item Name is " + selectedItem, Toast.LENGTH_LONG).show();
-                ABCTextView.setText(selectedItem);
+        codeScanner.setDecodeCallback(new DecodeCallback() {
+            public void onDecoded(final Result result) {
+                MainActivity.this.runOnUiThread(new Runnable() {
+                    public void run() {
+                        int i;
+                        int j;
+                        int k;
+                        //Bitmap bitmap;
+                        MainActivity.this.ABCTextView.setText(result.getText());
+                        TextViewCompat.setAutoSizeTextTypeWithDefaults(MainActivity.this.ABCTextView, 1);
+                        ImageView qr_imageView = (ImageView)MainActivity.this.findViewById(R.id.qrview);
+                        //data fro qr generator
+                        String data = MainActivity.this.ABCTextView.getText().toString().trim();
+
+                        QRCodeWriter qRCodeWriter = new QRCodeWriter();
+                        //bitmap = Bitmap.createBitmap(j, k, Bitmap.Config.RGB_565);
+
+                        try {
+                            BitMatrix result = new QRCodeWriter().encode(data, BarcodeFormat.QR_CODE, 512, 512);
+                            Bitmap    bitmap = Bitmap.createBitmap(result.getWidth(), result.getHeight(), Bitmap.Config.ARGB_8888);
+
+                            for (int y = 0; y < result.getHeight(); y++) {
+                                for (int x = 0; x < result.getWidth(); x++) {
+                                    if (result.get(x, y)) {
+                                        bitmap.setPixel(x, y, Color.BLACK);
+                                    }
+                                }
+                            }
+                            qr_imageView.setImageBitmap(bitmap);
+                        } catch (WriterException e) {
+                             Bitmap.createBitmap(512, 512, Bitmap.Config.ARGB_8888);
+                        }
+
+
+
+                    }
+                });
             }
-    });
-
-        previewView = findViewById(R.id.activity_main_previewView);
-        cameraProviderFuture = ProcessCameraProvider.getInstance(this);
-        requestCamera();
-    }
-
-    public void  clickA(View view){
-        ABCTextView.setText("A");
-    }
-
-   public void  clickB(View view){
-       ABCTextView.setText("B");
-    }
-
-
-    public void  clickC(View view){
-        ABCTextView.setText("C");
-    }
-
-
-
-    private void requestCamera() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-            startCamera();
-        } else {
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA)) {
-                ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.CAMERA}, PERMISSION_REQUEST_CAMERA);
-            } else {
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, PERMISSION_REQUEST_CAMERA);
+        });
+        codeScannerView.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View param1View) {
+                MainActivity.this.mCodeScanner.startPreview();
             }
+        });
+    }
+
+    public void clickA(View paramView) {
+        this.ABCTextView.setText("A");
+    }
+
+    public void onRequestPermissionsResult(int paramInt, String[] paramArrayOfString, int[] paramArrayOfint) {
+        super.onRequestPermissionsResult(paramInt, paramArrayOfString, paramArrayOfint);
+        if (paramInt == 123) {
+            if (paramArrayOfint[0] == 0) {
+                Toast.makeText((Context)this, "Camera permission granted", Toast.LENGTH_SHORT).show();
+                startScanning();
+                return;
+            }
+            Toast.makeText((Context)this, "Camera permission denied", Toast.LENGTH_SHORT).show();
         }
     }
 
-    private void startCamera() {
-        Toast.makeText(this, "Starting camera", Toast.LENGTH_SHORT).show();
-            cameraProviderFuture.addListener(() -> {
-                try {
-                    ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
-                    bindCameraPreview(cameraProvider);
-                } catch (ExecutionException | InterruptedException e) {
-                    Toast.makeText(this, "Error starting camera " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                }
-            }, ContextCompat.getMainExecutor(this));
-        }
-
-    private void bindCameraPreview(@NonNull ProcessCameraProvider cameraProvider) {
-        previewView.setPreferredImplementationMode(PreviewView.ImplementationMode.SURFACE_VIEW);
-
-        Preview preview = new Preview.Builder()
-                .build();
-
-        CameraSelector cameraSelector = new CameraSelector.Builder()
-                .requireLensFacing(CameraSelector.LENS_FACING_BACK)
-                .build();
-
-        preview.setSurfaceProvider(previewView.createSurfaceProvider());
-
-        Camera camera = cameraProvider.bindToLifecycle((LifecycleOwner)this, cameraSelector, preview);
+    protected void onPause() {
+        CodeScanner codeScanner = this.mCodeScanner;
+        if (codeScanner != null)
+            codeScanner.releaseResources();
+        super.onPause();
     }
 
-
-
-
-
-
-
+    protected void onResume() {
+        super.onResume();
+        CodeScanner codeScanner = this.mCodeScanner;
+        if (codeScanner != null)
+            codeScanner.startPreview();
     }
-
+}
