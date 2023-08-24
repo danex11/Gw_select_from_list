@@ -1,5 +1,5 @@
 # Gw_select_from_list
-An example MVP for displaying an item selected from the list. Open Source.
+An example MVP for displaying scanned QR code or an item selected from the list. Open Source.
 
 
 It scans and displays.
